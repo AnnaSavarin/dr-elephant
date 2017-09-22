@@ -21,7 +21,6 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.linkedin.drelephant.analysis.Severity;
 
 import com.linkedin.drelephant.util.Utils;
-import java.util.Date;
 
 import org.joda.time.DateTime;
 import play.db.ebean.Model;
@@ -170,11 +169,15 @@ public class AppResult extends Model {
   public static Finder<String, AppResult> find = new Finder<String, AppResult>(String.class, AppResult.class);
 
   @Transactional
-  public static int deleteOlderThan(int days, int batchSize) {
-    List<AppResult> toDelete =
-            find.where().lt("finishTime", DateTime.now().minusDays(days).getMillis()).setMaxRows(batchSize).findList();
-    for (AppResult appResult : toDelete) {
-      Ebean.delete(appResult);
+  public static int deleteOlderThan(int days, int batchSize, DateTime startingFrom) {
+    List<Object> toDelete = find
+        .where()
+        .lt("finishTime", startingFrom.minusDays(days).getMillis())
+        .setMaxRows(batchSize)
+        .findIds();
+
+    for (Object id : toDelete) {
+      Ebean.delete(AppResult.class, id);
     }
 
     return toDelete.size();

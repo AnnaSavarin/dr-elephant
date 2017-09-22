@@ -61,12 +61,6 @@ public class RestAPITest {
 
   @Before
   public void setup() {
-    Map<String, String> dbConn = new HashMap<String, String>();
-    dbConn.put(DB_DEFAULT_DRIVER_KEY, DB_DEFAULT_DRIVER_VALUE);
-    dbConn.put(DB_DEFAULT_URL_KEY, DB_DEFAULT_URL_VALUE);
-    dbConn.put(EVOLUTION_PLUGIN_KEY, EVOLUTION_PLUGIN_VALUE);
-    dbConn.put(APPLY_EVOLUTIONS_DEFAULT_KEY, APPLY_EVOLUTIONS_DEFAULT_VALUE);
-
     GlobalSettings gs = new GlobalSettings() {
       @Override
       public void onStart(Application app) {
@@ -74,7 +68,7 @@ public class RestAPITest {
       }
     };
 
-    fakeApp = fakeApplication(dbConn, gs);
+    fakeApp = fakeApplication(DBTestUtil.dbConn(), gs);
   }
 
   /**

@@ -24,6 +24,9 @@ import com.linkedin.drelephant.analysis.HDFSContext;
 import com.linkedin.drelephant.analysis.HadoopSystemContext;
 import com.linkedin.drelephant.analysis.AnalyticJobGeneratorHadoop2;
 
+import com.linkedin.drelephant.purge.AppResultPurger;
+import com.linkedin.drelephant.purge.ElephantPurger;
+import com.linkedin.drelephant.purge.PurgeResult;
 import com.linkedin.drelephant.security.HadoopSecurity;
 
 import controllers.MetricsController;
@@ -42,6 +45,7 @@ import models.AppResult;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
 
 
 /**
@@ -73,6 +77,7 @@ public class ElephantRunner implements Runnable {
   private HadoopSecurity _hadoopSecurity;
   private ThreadPoolExecutor _threadPoolExecutor;
   private AnalyticJobGenerator _analyticJobGenerator;
+  private ElephantPurger _appResultPurger;
 
   private void loadGeneralConfiguration() {
     Configuration configuration = ElephantContext.instance().getGeneralConf();
@@ -81,15 +86,13 @@ public class ElephantRunner implements Runnable {
     _fetchInterval = Utils.getNonNegativeLong(configuration, FETCH_INTERVAL_KEY, FETCH_INTERVAL);
     _retryInterval = Utils.getNonNegativeLong(configuration, RETRY_INTERVAL_KEY, RETRY_INTERVAL);
 
-    if (Utils.isSet(RETENTION_PERIOD_KEY)) {
-      _retentionPeriod = configuration.getInt(RETENTION_PERIOD_KEY, 0);
-      if (_retentionPeriod < 0) {
-        logger.error("Retention period was set incorrectly; needs to be a positive value.");
-      } else {
-        _purgeBatchSize = Utils.getNonNegativeInt(configuration, PURGE_BATCH_SIZE_KEY, PURGE_BATCH_SIZE);
-        // By default, purge old data at the same rate that it's added
-        _purgeOperationInterval = Utils.getNonNegativeLong(configuration, PURGE_OPERATION_INTERVAL_KEY, _fetchInterval);
-      }
+    _retentionPeriod = configuration.getInt(RETENTION_PERIOD_KEY, 0);
+    if (_retentionPeriod > 0) {
+      _purgeBatchSize = Utils.getNonNegativeInt(configuration, PURGE_BATCH_SIZE_KEY, PURGE_BATCH_SIZE);
+      // By default, purge old data at the same rate that it's added
+      _purgeOperationInterval = Utils.getNonNegativeLong(configuration, PURGE_OPERATION_INTERVAL_KEY, _fetchInterval);
+    } else {
+      logger.error("Retention period was set incorrectly; needs to be a positive integer value.");
     }
   }
 
@@ -130,7 +133,8 @@ public class ElephantRunner implements Runnable {
           }
 
           if (_retentionPeriod > 0) {
-            new Thread(new PurgeExecutorJob()).start();
+            _appResultPurger = new AppResultPurger();
+            new Thread(new PurgeThreadJob()).start();
             logger.info("Purger thread initiated");
           }
 
@@ -229,27 +233,23 @@ public class ElephantRunner implements Runnable {
     }
   }
 
-  private class PurgeExecutorJob implements Runnable {
+  private class PurgeThreadJob implements Runnable {
 
     @Override
     public void run() {
       try {
         while (_running.get() && !Thread.currentThread().isInterrupted()) {
-          int deletedRecords;
-          do {
-            deletedRecords = AppResult.deleteOlderThan(_retentionPeriod, _purgeBatchSize);
-            logger.info("Purged " + deletedRecords + " older than " + _retentionPeriod + " from the database");
-          } while (deletedRecords > 0);
+          PurgeResult purgeResult = _appResultPurger.purgeOlderThan(_retentionPeriod, _purgeBatchSize, DateTime.now());
+          logger.info("Purged " + purgeResult.getNumRecordsDeleted() + " records older than " + _retentionPeriod + " in " + purgeResult.getNumBatches() + " batches.");
 
           Thread.sleep(_purgeOperationInterval);
         }
-      } catch(InterruptedException e){
+      } catch(InterruptedException e) {
         logger.info("Purger thread interrupted");
         logger.info(e.getMessage());
         logger.info(ExceptionUtils.getStackTrace(e));
-
         Thread.currentThread().interrupt();
-      } catch(Exception e){
+      } catch(Exception e) {
         logger.error(e.getMessage());
         logger.error(ExceptionUtils.getStackTrace(e));
       }

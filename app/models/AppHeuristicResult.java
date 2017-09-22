@@ -64,7 +64,7 @@ public class AppHeuristicResult extends Model {
   public int id;
 
   @JsonBackReference
-  @ManyToOne(cascade = CascadeType.ALL)
+  @ManyToOne
   public AppResult yarnAppResult;
 
   @Column(length = HEURISTIC_CLASS_LIMIT, nullable = false)
@@ -80,7 +80,11 @@ public class AppHeuristicResult extends Model {
   public int score;
 
   @JsonManagedReference
-  @OneToMany(cascade = CascadeType.ALL, mappedBy = "yarnAppHeuristicResult")
+  @OneToMany(cascade = CascadeType.ALL, mappedBy = "yarnAppHeuristicResult", orphanRemoval = true)
   public List<AppHeuristicResultDetails> yarnAppHeuristicResultDetails;
+
+  public int getId() {
+    return this.id;
+  }
 
 }

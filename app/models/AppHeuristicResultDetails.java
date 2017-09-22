@@ -17,18 +17,14 @@
 package models;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import javax.persistence.CascadeType;
-import javax.persistence.Column;
-import javax.persistence.Embeddable;
-import javax.persistence.EmbeddedId;
-import javax.persistence.Entity;
-import javax.persistence.ManyToOne;
 
-import javax.persistence.Table;
+import javax.persistence.*;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import play.db.ebean.Model;
+
+import java.util.UUID;
 
 
 @Entity
@@ -49,11 +45,15 @@ public class AppHeuristicResultDetails extends Model {
     public static final String DETAILS = "details";
   }
 
+  @EmbeddedId
+  public AppHeuristicResultDetailsPK compositePK;
+
   @JsonBackReference
-  @ManyToOne(cascade = CascadeType.ALL)
+  @ManyToOne
+  @JoinColumn(name = "yarn_app_heuristic_result_id", insertable = false, updatable = false)
   public AppHeuristicResult yarnAppHeuristicResult;
 
-  @Column(length=NAME_LIMIT, nullable = false)
+  @Column(length=NAME_LIMIT, nullable = false, insertable = false, updatable = false)
   public String name;
 
   @Column(length=VALUE_LIMIT, nullable = false)
@@ -61,4 +61,10 @@ public class AppHeuristicResultDetails extends Model {
 
   @Column(nullable = true)
   public String details;
+
+  public AppHeuristicResultDetails(AppHeuristicResult yarnAppHeuristicResult, String name) {
+    this.compositePK = new AppHeuristicResultDetailsPK(yarnAppHeuristicResult, name);
+    this.yarnAppHeuristicResult = yarnAppHeuristicResult;
+    this.name = name;
+  }
 }

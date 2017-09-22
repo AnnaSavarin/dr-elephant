@@ -290,10 +290,8 @@ public class AnalyticJob {
 
       // Load Heuristic Details
       for (HeuristicResultDetails heuristicResultDetails : heuristicResult.getHeuristicResultDetails()) {
-        AppHeuristicResultDetails heuristicDetail = new AppHeuristicResultDetails();
-        heuristicDetail.yarnAppHeuristicResult = detail;
-        heuristicDetail.name = Utils.truncateField(heuristicResultDetails.getName(),
-            AppHeuristicResultDetails.NAME_LIMIT, getAppId());
+        AppHeuristicResultDetails heuristicDetail = new AppHeuristicResultDetails(detail, Utils.truncateField(heuristicResultDetails.getName(),
+                AppHeuristicResultDetails.NAME_LIMIT, getAppId()));
         heuristicDetail.value = Utils.truncateField(heuristicResultDetails.getValue(),
             AppHeuristicResultDetails.VALUE_LIMIT, getAppId());
         heuristicDetail.details = Utils.truncateField(heuristicResultDetails.getDetails(),
