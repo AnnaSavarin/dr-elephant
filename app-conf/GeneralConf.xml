@@ -52,7 +52,7 @@
   </property>
   <property>
     <name>drelephant.analysis.purge.batch.size</name>
-    <value>10000</value>
+    <value>1000</value>
     <description>Batch size of purge operation</description>
   </property>
   <property>
